@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 58e0017d1b848446dad5c913d93b696a
+timeCreated: 1515668346
+licenseType: Pro
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - selectFace: {fileID: 2100000, guid: d1f41a34a163041b3a2f5788f3ea1575, type: 2}
+  - selectLine: {fileID: 2100000, guid: d7eac849d9b8a425bad2d6b734e3ff2f, type: 2}
+  - selectVert: {fileID: 2100000, guid: f4eff9459c09d4fa3b84fed93134c56f, type: 2}
+  - baseUnit: {fileID: 1126020061721940, guid: 931d6afd706de46aa8ad3d904c2aa004, type: 2}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
