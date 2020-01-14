@@ -2,6 +2,8 @@
 This is a 3D modeling tool I build for my other project,
 where you basically editing the model by adding cubes on top of cubes(like minecraft)
 
+![ScreenShot](https://github.com/ShiyiDu/DE_Editor/blob/master/ScreenShots/Screen_shot_1.png)
+
 I build this tool without using GitHub,
 So there's no commit histories.
 
