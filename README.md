@@ -2,7 +2,8 @@
 This is a 3D modeling tool I build for my other project,
 where you basically editing the model by adding cubes on top of cubes(like minecraft)
 
-Windows Build: [DEEditor_0.1.6(Win).zip](https://github.com/ShiyiDu/DE_Editor/blob/master/DEEditor_0.1.6(Win).zip)
+Windows Build: [DEEditor_0.1.6(Win).zip](https://github.com/ShiyiDu/DE_Editor/raw/master/DEEditor_0.1.6(Win).zip)
+Mac Build: [DE_Editor_0.2(Mac).zip](https://github.com/ShiyiDu/DE_Editor/raw/master/DE_Editor_0.2(Mac).zip)
 
 ![ScreenShot](https://github.com/ShiyiDu/DE_Editor/blob/master/ScreenShots/Screen_shot_1.png)
 
