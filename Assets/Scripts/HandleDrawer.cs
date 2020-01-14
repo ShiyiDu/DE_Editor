@@ -41,11 +41,15 @@ public static class HandleDrawer
         //originSceneRot = scene.transform.parent.rotation;
     }
 
+
+    private static Stopwatch sw = new Stopwatch();
+
     //this update the selection info,
     //this class is created so that when selection is unchanged, the vertex doesnot need to be recalculated
     public static void UpdateSelection(DEPosition rfu, DEPosition lbd, DEPosition[] visibleSelection, bool isPlane, DEDirection planeDirection)
     {
         if (updatingSelection) return;
+        //else UnityEngine.Debug.Log("last update took: " + sw.ElapsedMilliseconds + "(ms)");
         updatingSelection = true;
         HandleDrawer.isPlane = isPlane;
         HandleDrawer.planeDirection = planeDirection;
@@ -69,7 +73,8 @@ public static class HandleDrawer
         //todo: maybe use another thread to dynamicly recalculate verts?
         //todo: or!!!! maybe I pre-calculate all the verts of the scene, decide which to draw, and add offsets on top of them whenever the scene moves!!!
         //Stopwatch sw = new Stopwatch();
-        //sw.Start();
+        sw.Reset();
+        sw.Start();
 
         List<Vector3> quadVerts = new List<Vector3>();
         //verts of selection cube or plane, only first 4 is used if a plane is being drawn
@@ -201,6 +206,7 @@ public static class HandleDrawer
         HandleDrawer.p = p;
 
         updatingSelection = false;
+        sw.Stop();
     }
 
     public static void DrawSelectionCube()
