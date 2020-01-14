@@ -12,7 +12,7 @@ Mac Build: [DE_Editor_0.2(Mac).zip](https://github.com/ShiyiDu/DE_Editor/raw/mas
 I build this tool without using GitHub,
 So there's no commit histories.
 
-Hot keys:
+Hot keys:  
 Space/Mouse Wheel Click: move the scene  
 Left Mouse: select editing area  
 Right Mouse: Rotate the scene  
