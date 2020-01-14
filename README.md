@@ -6,7 +6,7 @@ I build this tool without using GitHub,
 So there's no commit histories.
 
 Hot keys:
-Space/Mouse Wheel Click: move the scene
+Space/Mouse Wheel Click: move the scene\n
 Left Mouse: select editing area
 Right Mouse: Rotate the scene
 W: fill the selected area
