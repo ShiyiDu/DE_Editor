@@ -6,17 +6,16 @@ I build this tool without using GitHub,
 So there's no commit histories.
 
 Hot keys:
-Space/Mouse Wheel Click: move the scene
+Space/Mouse Wheel Click: move the scene  
+Left Mouse: select editing area  
+Right Mouse: Rotate the scene  
+W: fill the selected area  
+Q: remove selected area  
+Ctrl + S: Save the file  
+Ctrl + Z: Undo editing  
+Ctrl + Shift + Z: Redo editing  
+Double Click Right Mouse: reset the perspective of the scene  
 
-Left Mouse: select editing area
-Right Mouse: Rotate the scene
-W: fill the selected area
-Q: remove selected area
-Ctrl + S: Save the file
-Ctrl + Z: Undo editing
-Ctrl + Shift + Z: Redo editing
-Double Click Right Mouse: reset the perspective of the scene
+F1~F4: set the perspective to pre-defined angles  
 
-F1~F4: set the perspective to pre-defined angles
-
-You can load old files or create new files using the buttons on top-left corner.
+You can load old files or create new files using the buttons on top-left corner.  
