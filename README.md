@@ -24,5 +24,6 @@ Ctrl + Shift + Z: Redo editing
 Double Click Right Mouse: reset the perspective of the scene  
 
 F1~F4: set the perspective to pre-defined angles  
+Esc: Exit the program
 
 You can load old files or create new files using the buttons on top-left corner.  
