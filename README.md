@@ -5,7 +5,7 @@ where you basically editing the model by adding cubes on top of cubes(like minec
 Download Link:
 Windows Build: [DEEditor_0.1.6(Win).zip](https://github.com/ShiyiDu/DE_Editor/raw/master/DEEditor_0.1.6(Win).zip)  
 Mac Build: [DE_Editor_0.2(Mac).zip](https://github.com/ShiyiDu/DE_Editor/raw/master/DE_Editor_0.2(Mac).zip).  
-(I'm unable to port it to web build as WebGL somehow behave differently than OpenGL.)  
+(I'm unable to port it to web build as WebGL somehow behaves differently than OpenGL.)  
 
 ![ScreenShot](https://github.com/ShiyiDu/DE_Editor/blob/master/ScreenShots/Screen_shot_1.png)
 
