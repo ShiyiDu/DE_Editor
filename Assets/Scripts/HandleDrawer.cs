@@ -7,6 +7,9 @@ using System.Diagnostics;
 //this can only be accessed by sceneview maybe? this cannot have communications with SceneControl
 using System.Linq;
 using System.Threading;
+using System.Collections.Concurrent;
+using System;
+
 public static class HandleDrawer
 {
     //private static bool selecting = false;
@@ -53,11 +56,16 @@ public static class HandleDrawer
         updatingSelection = true;
         HandleDrawer.isPlane = isPlane;
         HandleDrawer.planeDirection = planeDirection;
-        Thread updater = new Thread(new ParameterizedThreadStart(UpdateSelectionThread));
+        //Thread updater = new Thread(new ParameterizedThreadStart(UpdateSelectionThread));
+
+
+        //UnityEngine.Debug.Log("visible selection size:" + visibleSelection.Length);
 
         l2W = scene.transform.localToWorldMatrix;
         object updateData = new object[2] { new DEPosition[2] { rfu, lbd }, visibleSelection };
-        updater.Start(updateData);
+        UpdateSelectionThread(updateData);
+
+        //updater.Start(updateData);
         //UnityEngine.Debug.Log("Time used for calculate side verts:" + sw.ElapsedMilliseconds);
     }
 
@@ -73,8 +81,8 @@ public static class HandleDrawer
         //todo: maybe use another thread to dynamicly recalculate verts?
         //todo: or!!!! maybe I pre-calculate all the verts of the scene, decide which to draw, and add offsets on top of them whenever the scene moves!!!
         //Stopwatch sw = new Stopwatch();
-        sw.Reset();
-        sw.Start();
+        //sw.Reset();
+        //sw.Start();
 
         List<Vector3> quadVerts = new List<Vector3>();
         //verts of selection cube or plane, only first 4 is used if a plane is being drawn
@@ -101,9 +109,10 @@ public static class HandleDrawer
         p[6] = l2W.MultiplyPoint3x4(lP6);
         p[7] = l2W.MultiplyPoint3x4(new Vector3(lP6.x, lP3.y, lP6.z));
 
+
         //create a hash set for faster lookups later
         HashSet<DEPosition> visibleHashSet = new HashSet<DEPosition>(visibleSelection);
-
+        //UnityEngine.Debug.Log("Time used for creating hashset:" + sw.ElapsedMilliseconds);
         if (!isPlane) {
             //todo: this is not working for now!
             //Vector3 offSet = Vector3.zero;
@@ -147,9 +156,6 @@ public static class HandleDrawer
                 }
             }
 
-            //todo: maybe instead of drawing all the exists units, I can try not to draw all the non exists unit?
-            //UnityEngine.Debug.Log("Time used for finding side units:" + sw.ElapsedMilliseconds);
-
             //get verts on the sides
             foreach (DEPosition pos in r2d) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.right, l2W));
             foreach (DEPosition pos in l2d) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.left, l2W));
@@ -157,6 +163,8 @@ public static class HandleDrawer
             foreach (DEPosition pos in b2d) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.back, l2W));
             foreach (DEPosition pos in u2d) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.up, l2W));
             foreach (DEPosition pos in d2d) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.down, l2W));
+
+            //UnityEngine.Debug.Log("Time used for finding side units:" + sw.ElapsedMilliseconds);
 
             //free up memory
             //r2d = null;
@@ -167,14 +175,205 @@ public static class HandleDrawer
             //d2d = null;
 
             //get verts within selection
-            foreach (DEPosition pos in visibleSelection) {
-                if (!visibleHashSet.Contains(pos.right)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.right, l2W));
-                if (!visibleHashSet.Contains(pos.left)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.left, l2W));
-                if (!visibleHashSet.Contains(pos.forward)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.forward, l2W));
-                if (!visibleHashSet.Contains(pos.back)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.back, l2W));
-                if (!visibleHashSet.Contains(pos.up)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.up, l2W));
-                if (!visibleHashSet.Contains(pos.down)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.down, l2W));
+            //List<Vector3[]> vertexToCalculate = new List<Vector3[]>();
+
+            ///Turns out its the branching that takes up the most amount of cpu time
+            //foreach (DEPosition pos in visibleSelection) {
+            //    if (!DEUtility.ContainsPos(pos.right)) vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.right));
+            //    if (!DEUtility.ContainsPos(pos.left)) vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.left));
+            //    if (!DEUtility.ContainsPos(pos.forward)) vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.forward));
+            //    if (!DEUtility.ContainsPos(pos.back)) vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.back));
+            //    if (!DEUtility.ContainsPos(pos.up)) vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.up));
+            //    if (!DEUtility.ContainsPos(pos.down)) vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.down));
+            //}
+
+            ////////////////////////////////////////
+
+            //multithreading speed up the drawing by around 60%
+            int threadCount = 6;
+            ConcurrentQueue<Vector3[]> sels = new ConcurrentQueue<Vector3[]>();
+
+            void worker(object workerArgs)
+            {
+                int[] threadArg = (int[])workerArgs;
+                int count = threadArg[0];
+                int index = threadArg[1];
+                int block = visibleSelection.Length / count;
+                int start = index * (block);
+                int end = (index + 1) * block;
+                if (index + 1 == count) end = visibleSelection.Length;
+
+                for (int i = start; i < end; i++) {
+                    DEPosition pos = visibleSelection[i];
+                    if (!DEUtility.ContainsPos(pos.right)) sels.Enqueue(DEPosition.GetQuadWorldVertexs(pos, DEDirection.right, l2W));
+                    if (!DEUtility.ContainsPos(pos.left)) sels.Enqueue(DEPosition.GetQuadWorldVertexs(pos, DEDirection.left, l2W));
+                    if (!DEUtility.ContainsPos(pos.forward)) sels.Enqueue(DEPosition.GetQuadWorldVertexs(pos, DEDirection.forward, l2W));
+                    if (!DEUtility.ContainsPos(pos.back)) sels.Enqueue(DEPosition.GetQuadWorldVertexs(pos, DEDirection.back, l2W));
+                    if (!DEUtility.ContainsPos(pos.up)) sels.Enqueue(DEPosition.GetQuadWorldVertexs(pos, DEDirection.up, l2W));
+                    if (!DEUtility.ContainsPos(pos.down)) sels.Enqueue(DEPosition.GetQuadWorldVertexs(pos, DEDirection.down, l2W));
+                }
             }
+
+            Thread[] workers = new Thread[threadCount - 1];
+            for (int i = 0; i < threadCount - 1; i++) {
+                workers[i] = new Thread(new ParameterizedThreadStart(worker));
+                workers[i].Start(new int[] { threadCount, i });
+            }
+
+            worker(new int[] { threadCount, threadCount - 1 });
+
+            foreach (Thread w in workers) {
+                w.Join();
+            }
+
+            foreach (Vector3[] verts in sels) quadVerts.AddRange(verts);
+
+            ////////////////////////////////
+
+            //split this thread into 6 child thread to do the following calculation:
+            //List<Vector3[]> rightSel = new List<Vector3[]>();
+            //List<Vector3[]> leftSel = new List<Vector3[]>();
+            //List<Vector3[]> backSel = new List<Vector3[]>();
+            //List<Vector3[]> frontSel = new List<Vector3[]>();
+            //List<Vector3[]> upSel = new List<Vector3[]>();
+            //List<Vector3[]> downSel = new List<Vector3[]>();
+
+            ////Duplicated code is to avoid branching, so it runs more efficiently
+
+            //void w1()
+            //{
+            //    foreach (DEPosition pos in visibleSelection) {
+            //        if (!DEUtility.ContainsPos(pos.right)) rightSel.Add(DEPosition.GetQuadWorldVertexs(pos, DEDirection.right, l2W));
+            //    }
+            //}
+
+            //void w2()
+            //{
+            //    foreach (DEPosition pos in visibleSelection) {
+            //        if (!DEUtility.ContainsPos(pos.left)) leftSel.Add(DEPosition.GetQuadWorldVertexs(pos, DEDirection.left, l2W));
+            //    }
+            //}
+
+            //void w3()
+            //{
+            //    foreach (DEPosition pos in visibleSelection) {
+            //        if (!DEUtility.ContainsPos(pos.back)) backSel.Add(DEPosition.GetQuadWorldVertexs(pos, DEDirection.back, l2W));
+            //    }
+            //}
+
+            //void w4()
+            //{
+            //    foreach (DEPosition pos in visibleSelection) {
+            //        if (!DEUtility.ContainsPos(pos.forward)) frontSel.Add(DEPosition.GetQuadWorldVertexs(pos, DEDirection.forward, l2W));
+            //    }
+            //}
+
+            //void w5()
+            //{
+            //    foreach (DEPosition pos in visibleSelection) {
+            //        if (!DEUtility.ContainsPos(pos.up)) upSel.Add(DEPosition.GetQuadWorldVertexs(pos, DEDirection.up, l2W));
+            //    }
+            //}
+
+            //void w6()
+            //{
+            //    foreach (DEPosition pos in visibleSelection) {
+            //        if (!DEUtility.ContainsPos(pos.down)) downSel.Add(DEPosition.GetQuadWorldVertexs(pos, DEDirection.down, l2W));
+            //    }
+            //}
+
+            //Thread worker1 = new Thread(new ThreadStart(w1));
+            //Thread worker2 = new Thread(new ThreadStart(w2));
+            //Thread worker3 = new Thread(new ThreadStart(w3));
+            //Thread worker4 = new Thread(new ThreadStart(w4));
+            //Thread worker5 = new Thread(new ThreadStart(w5));
+            //Thread worker6 = new Thread(new ThreadStart(w6));
+
+            //worker1.Start();
+            //worker2.Start();
+            //worker3.Start();
+            //worker4.Start();
+            //worker5.Start();
+            //worker6.Start();
+
+            //worker1.Join();
+            //worker2.Join();
+            //worker3.Join();
+            //worker4.Join();
+            //worker5.Join();
+            //worker6.Join();
+
+            //foreach (Vector3[] verts in leftSel) { quadVerts.AddRange(verts); }
+            //foreach (Vector3[] verts in rightSel) { quadVerts.AddRange(verts); }
+            //foreach (Vector3[] verts in upSel) { quadVerts.AddRange(verts); }
+            //foreach (Vector3[] verts in downSel) { quadVerts.AddRange(verts); }
+            //foreach (Vector3[] verts in frontSel) { quadVerts.AddRange(verts); }
+            //foreach (Vector3[] verts in backSel) { quadVerts.AddRange(verts); }
+
+
+            ////////////////////////////////// //////////////////////////////////
+
+            //for (int i = 0; i < visibleSelection.Length; i++) {
+            //    DEPosition pos = visibleSelection[i];
+            //    if (!DEUtility.ContainsPos(pos.right)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.right, l2W));
+            //    if (!DEUtility.ContainsPos(pos.left)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.left, l2W));
+            //    if (!DEUtility.ContainsPos(pos.forward)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.forward, l2W));
+            //    if (!DEUtility.ContainsPos(pos.back)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.back, l2W));
+            //    if (!DEUtility.ContainsPos(pos.up)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.up, l2W));
+            //    if (!DEUtility.ContainsPos(pos.down)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.down, l2W));
+            //}
+
+            //foreach (DEPosition pos in visibleSelection) { 
+            //DEPosition right = pos.right;
+            //DEPosition left = pos.left;
+            //DEPosition front = pos.forward;
+            //DEPosition back = pos.back;
+            //DEPosition up = pos.up;
+            //DEPosition down = pos.down;
+
+            //if (!DEUtility.ContainsPos(pos.right)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.right, l2W));
+            //if (!DEUtility.ContainsPos(pos.left)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.left, l2W));
+            //if (!DEUtility.ContainsPos(pos.forward)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.forward, l2W));
+            //if (!DEUtility.ContainsPos(pos.back)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.back, l2W));
+            //if (!DEUtility.ContainsPos(pos.up)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.up, l2W));
+            //if (!DEUtility.ContainsPos(pos.down)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.down, l2W));
+            //}
+
+            //HashSet<DEPosition> searched = new HashSet<DEPosition>();
+
+            //foreach (DEPosition pos in visibleSelection) {
+            //    DEPosition right = pos.right;
+            //    DEPosition left = pos.left;
+            //    DEPosition front = pos.forward;
+            //    DEPosition back = pos.back;
+            //    DEPosition up = pos.up;
+            //    DEPosition down = pos.down;
+
+            //    if (!searched.Contains(right)) {
+            //        searched.Add(right);
+            //        if (!DEUtility.ContainsPos(pos.right)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.right, l2W));
+            //    }
+            //    if (!searched.Contains(left)) {
+            //        searched.Add(left);
+            //        if (!DEUtility.ContainsPos(pos.left)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.left, l2W));
+            //    }
+            //    if (!searched.Contains(front)) {
+            //        searched.Add(front);
+            //        if (!DEUtility.ContainsPos(pos.forward)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.forward, l2W));
+            //    }
+            //    if (!searched.Contains(back)) {
+            //        searched.Add(back);
+            //        if (!DEUtility.ContainsPos(pos.back)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.back, l2W));
+            //    }
+            //    if (!searched.Contains(up)) {
+            //        searched.Add(up);
+            //        if (!DEUtility.ContainsPos(pos.up)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.up, l2W));
+            //    }
+            //    if (!searched.Contains(down)) {
+            //        searched.Add(down);
+            //        if (!DEUtility.ContainsPos(pos.down)) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.down, l2W));
+            //    }
+            //}
         } else {
             foreach (DEPosition pos in visibleSelection) {
                 quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, planeDirection, l2W));
@@ -205,17 +404,22 @@ public static class HandleDrawer
         HandleDrawer.planeVerts = planeVerts;
         HandleDrawer.p = p;
 
+        //UnityEngine.Debug.Log("Time used for updating selection:" + sw.ElapsedMilliseconds);
         updatingSelection = false;
-        sw.Stop();
+        //sw.Stop();
     }
 
     public static void DrawSelectionCube()
     {
+        GL.Begin(GL.QUADS);
+        faceMat.SetPass(0);
+        //GL.Color(Color.white);
         for (int i = 0; i < quadVerts.Count; i += 4) {
             DrawQuad(new Vector3[] { quadVerts[i], quadVerts[i + 1], quadVerts[i + 2], quadVerts[i + 3] }, faceMat);
         }
-
+        GL.End();
         //now lets draw 12 sides
+        GL.Begin(GL.LINES);
         DrawSelectionLine(p[0], p[1]);
         DrawSelectionLine(p[1], p[2]);
         DrawSelectionLine(p[2], p[3]);
@@ -228,19 +432,26 @@ public static class HandleDrawer
         DrawSelectionLine(p[5], p[6]);
         DrawSelectionLine(p[6], p[7]);
         DrawSelectionLine(p[7], p[4]);
+        GL.End();
         //To do: draw all 8 vertex for stronger visual feed back
     }
 
     public static void DrawSelectionPlane()
     {
+        GL.Begin(GL.QUADS);
+        faceMat.SetPass(0);
+        //GL.Color(Color.white);
         for (int i = 0; i < quadVerts.Count; i += 4) {
             DrawQuad(new Vector3[] { quadVerts[i], quadVerts[i + 1], quadVerts[i + 2], quadVerts[i + 3] }, faceMat);
         }
+        GL.End();
 
+        GL.Begin(GL.LINES);
         DrawSelectionLine(planeVerts[0], planeVerts[1]);
         DrawSelectionLine(planeVerts[1], planeVerts[2]);
         DrawSelectionLine(planeVerts[2], planeVerts[3]);
         DrawSelectionLine(planeVerts[3], planeVerts[0]);
+        GL.End();
     }
 
     //public static void BeginSelection()
@@ -351,12 +562,12 @@ public static class HandleDrawer
     //draw a line
     private static void DrawLine(Vector3 beginPos, Vector3 endPos, Material mat)
     {
-        GL.Begin(GL.LINES);
-        mat.SetPass(0);
+        //GL.Begin(GL.LINES);
+        //mat.SetPass(0);
         GL.Color(Color.white);
         GL.Vertex(beginPos);
         GL.Vertex(endPos);
-        GL.End();
+        //GL.End();
     }
 
     //draw a dotted line
@@ -366,7 +577,7 @@ public static class HandleDrawer
         int segNum = Mathf.RoundToInt((beginPos - endPos).magnitude * 4);
         int vertNum = segNum * 2;
 
-        GL.Begin(GL.LINES);
+        //GL.Begin(GL.LINES);
         mat.SetPass(0);
         GL.Color(Color.white);
 
@@ -376,18 +587,18 @@ public static class HandleDrawer
             GL.Vertex(beginPos + i * offSet);
         }
 
-        GL.End();
+        //GL.End();
     }
 
     //draw a plane that can be hidden behind objects
     private static void DrawQuad(Vector3[] verts, Material mat)
     {
-        GL.Begin(GL.QUADS);
-        mat.SetPass(0);
-        GL.Color(Color.white);
+        //GL.Begin(GL.QUADS);
+        //mat.SetPass(0);
+
         for (int i = 0; i < verts.Length; i++) {
             GL.Vertex3(verts[i].x, verts[i].y, verts[i].z - 0.001f); //0.00008 seems to be a promising number
         }
-        GL.End();
+        //GL.End();
     }
 }
