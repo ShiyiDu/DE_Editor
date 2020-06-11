@@ -64,6 +64,7 @@ public class SceneView : MonoBehaviour
     private bool isPlane = false;
     private bool movingScene = false;
     private bool repeatingAction = false;
+    private bool updaterRunning = false; //the coroutine updater is running
 
     private DEDirection selectDirection;
 
@@ -122,32 +123,50 @@ public class SceneView : MonoBehaviour
         return true;
     }
 
-    private IEnumerator UpdateScene()
+    //private void StartUpdateSelection()
+    //{
+    //    if (!updaterRunning) {
+    //        updater = StartCoroutine(UpdateScene());
+    //        updaterRunning = true;
+    //    }
+    //}
+
+    //private void StopUpdateSelection()
+    //{
+    //    if (updaterRunning) {
+    //        StopCoroutine(updater);
+    //        updaterRunning = false;
+    //    }
+    //}
+
+    private void UpdateScene()
     {
-        while (true) {
-            currentSceneIndicator.text = fileName;
+        //while (true) {
+        currentSceneIndicator.text = fileName;
 
-            if (SceneControl.isSaving()) {
-                savingIndicator.SetActive(true);
-            } else {
-                savingIndicator.SetActive(false);
-            }
-            if (Input.GetMouseButton(selectUnit) && !Input.GetKey(KeyCode.Space)) SceneControl.UpdateSelecting();
-
-            visibleSelection = SceneControl.GetVisibleSelection().ToArray();
-            beginPos = SceneControl.BeginPos();
-            endPos = SceneControl.EndPos();
-            beginDir = SceneControl.BeginDir();
-            endDir = SceneControl.EndDir();
-
-            rfuAndLbd = DEUtility.RfuAndLbd(beginPos, beginDir, endPos, endDir);
-            isPlane = SceneControl.IsPlane();
-            selectDirection = SceneControl.SelectDirection();
-
-            HandleDrawer.UpdateSelection(rfuAndLbd[0], rfuAndLbd[1], visibleSelection, isPlane, selectDirection);
-
-            yield return new WaitForSeconds(0.034f);
+        if (SceneControl.isSaving()) {
+            savingIndicator.SetActive(true);
+        } else {
+            savingIndicator.SetActive(false);
         }
+        bool selChange = SceneControl.SelectionChanged();
+        if (Input.GetMouseButton(selectUnit) && !Input.GetKey(KeyCode.Space) && selChange)
+            SceneControl.UpdateSelecting();
+
+        if (selChange) visibleSelection = SceneControl.GetVisibleSelection().ToArray();
+        beginPos = SceneControl.BeginPos();
+        endPos = SceneControl.EndPos();
+        beginDir = SceneControl.BeginDir();
+        endDir = SceneControl.EndDir();
+
+        rfuAndLbd = DEUtility.RfuAndLbd(beginPos, beginDir, endPos, endDir);
+        isPlane = SceneControl.IsPlane();
+        selectDirection = SceneControl.SelectDirection();
+
+        HandleDrawer.UpdateSelection(rfuAndLbd[0], rfuAndLbd[1], visibleSelection, isPlane, selectDirection);
+
+        //    yield return new WaitForSeconds(Time.deltaTime);
+        //}
     }
 
     private IEnumerator RepeatAction(Action action)
@@ -263,7 +282,7 @@ public class SceneView : MonoBehaviour
             if (!Physics.Raycast(mouseRay, 200f, LayerMask.GetMask("DEBase"))) return;
 
             offset = mainCam.ScreenToWorldPoint(Input.mousePosition) - gameObject.transform.position;
-            updater = StartCoroutine(UpdateScene());
+            //StartUpdateSelection();
             movingScene = true;
         }
 
@@ -273,7 +292,8 @@ public class SceneView : MonoBehaviour
         }
         if (movingScene) {
             movingScene = false;
-            StopCoroutine(updater);
+            //StopUpdateSelection();
+            updaterRunning = false;
         }
     }
 
@@ -304,7 +324,7 @@ public class SceneView : MonoBehaviour
 
         SceneControl.InitializeBase(Mathf.RoundToInt(baseSize.x), Mathf.RoundToInt(baseSize.y), baseUnit, gameObject);
 
-        StartCoroutine(UpdateScene());
+        //StartUpdateSelection();
         cameraSize = mainCam.orthographicSize;
         scenePosition = transform.parent.position;
         sceneRotation = transform.rotation;
@@ -320,12 +340,12 @@ public class SceneView : MonoBehaviour
 
         if (Input.GetMouseButtonDown(selectUnit) && !Input.GetKey(KeyCode.Space)) {
             SceneControl.StartSelecting();
-            updater = StartCoroutine(UpdateScene());
+            //StartUpdateSelection();
         }
         //if (Input.GetMouseButton(selectUnit)) SceneControl.UpdateSelecting();
         if (Input.GetMouseButtonUp(selectUnit) && !Input.GetKey(KeyCode.Space)) {
-            StopCoroutine(updater);
-            SceneControl.StopSelecting();
+            //StopCoroutine(updater);
+            //StopUpdateSelection();
         }
 
         if (GetLongPress(createUnit)) {
@@ -397,6 +417,8 @@ public class SceneView : MonoBehaviour
         this.ZoomScene();
         this.RotateScene();
         this.ResetTransform();
+
+        UpdateScene();
     }
 
     bool GetKeys(KeyCode[] keys)

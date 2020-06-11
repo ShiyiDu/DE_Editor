@@ -4,7 +4,7 @@
 	down,
 	left, //x
 	right,
-	forward, //y
+	front, //y
 	back,
 }
 

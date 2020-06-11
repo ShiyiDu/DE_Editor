@@ -81,7 +81,7 @@ public static class BaseControl
                 Vector3 rayOrigin = ray.origin;
                 float forwardDis = (l2w.MultiplyPoint3x4(localHitPos) - rayOrigin).magnitude;
                 float backDis = (l2w.MultiplyPoint3x4(back) - rayOrigin).magnitude;
-                direction = forwardDis > backDis ? DEDirection.back : DEDirection.forward;
+                direction = forwardDis > backDis ? DEDirection.back : DEDirection.front;
             } else {
                 Vector3 down = new Vector3(localHitPos.x, localHitPos.y, localHitPos.z - 0.5f);
                 Vector3 rayOrigin = ray.origin;
@@ -100,7 +100,7 @@ public static class BaseControl
                 case DEDirection.left:
                     x += 0.5f;
                     break;
-                case DEDirection.forward:
+                case DEDirection.front:
                     y -= 0.5f;
                     break;
                 case DEDirection.back:
@@ -339,7 +339,7 @@ public static class BaseControl
                 targetVertices.Add(vert);
             foreach (Vector3 vert in DEPosition.GetQuadLocalVertexs(unitPos, DEDirection.left))
                 targetVertices.Add(vert);
-            foreach (Vector3 vert in DEPosition.GetQuadLocalVertexs(unitPos, DEDirection.forward))
+            foreach (Vector3 vert in DEPosition.GetQuadLocalVertexs(unitPos, DEDirection.front))
                 targetVertices.Add(vert);
             foreach (Vector3 vert in DEPosition.GetQuadLocalVertexs(unitPos, DEDirection.back))
                 targetVertices.Add(vert);

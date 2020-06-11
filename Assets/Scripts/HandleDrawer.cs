@@ -56,16 +56,17 @@ public static class HandleDrawer
         updatingSelection = true;
         HandleDrawer.isPlane = isPlane;
         HandleDrawer.planeDirection = planeDirection;
-        //Thread updater = new Thread(new ParameterizedThreadStart(UpdateSelectionThread));
+        Thread updater = new Thread(new ParameterizedThreadStart(UpdateSelectionThread));
 
 
         //UnityEngine.Debug.Log("visible selection size:" + visibleSelection.Length);
 
         l2W = scene.transform.localToWorldMatrix;
         object updateData = new object[2] { new DEPosition[2] { rfu, lbd }, visibleSelection };
-        UpdateSelectionThread(updateData);
+        //UpdateSelectionThread(updateData);
 
-        //updater.Start(updateData);
+        updater.Start(updateData);
+        updater.Join();
         //UnityEngine.Debug.Log("Time used for calculate side verts:" + sw.ElapsedMilliseconds);
     }
 
@@ -148,7 +149,7 @@ public static class HandleDrawer
 
                         if (pos.x == rfu.x && DEUtility.ContainsPos(pos.GetDirection(DEDirection.right))) r2d.Add(pos);
                         if (pos.x == lbd.x && DEUtility.ContainsPos(pos.GetDirection(DEDirection.left))) l2d.Add(pos);
-                        if (pos.y == rfu.y && DEUtility.ContainsPos(pos.GetDirection(DEDirection.forward))) f2d.Add(pos);
+                        if (pos.y == rfu.y && DEUtility.ContainsPos(pos.GetDirection(DEDirection.front))) f2d.Add(pos);
                         if (pos.y == lbd.y && DEUtility.ContainsPos(pos.GetDirection(DEDirection.back))) b2d.Add(pos);
                         if (pos.z == rfu.z && DEUtility.ContainsPos(pos.GetDirection(DEDirection.up))) u2d.Add(pos);
                         if (pos.z == lbd.z && DEUtility.ContainsPos(pos.GetDirection(DEDirection.down))) d2d.Add(pos);
@@ -159,7 +160,7 @@ public static class HandleDrawer
             //get verts on the sides
             foreach (DEPosition pos in r2d) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.right, l2W));
             foreach (DEPosition pos in l2d) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.left, l2W));
-            foreach (DEPosition pos in f2d) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.forward, l2W));
+            foreach (DEPosition pos in f2d) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.front, l2W));
             foreach (DEPosition pos in b2d) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.back, l2W));
             foreach (DEPosition pos in u2d) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.up, l2W));
             foreach (DEPosition pos in d2d) quadVerts.AddRange(DEPosition.GetQuadWorldVertexs(pos, DEDirection.down, l2W));
@@ -176,20 +177,23 @@ public static class HandleDrawer
 
             //get verts within selection
             //List<Vector3[]> vertexToCalculate = new List<Vector3[]>();
+            Stopwatch sw = new Stopwatch();
+            sw.Reset();
+            sw.Start();
 
-            ///Turns out its the branching that takes up the most amount of cpu time
+            ///Turns out its the hashing that takes up the most amount of cpu time
             //foreach (DEPosition pos in visibleSelection) {
-            //    if (!DEUtility.ContainsPos(pos.right)) vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.right));
-            //    if (!DEUtility.ContainsPos(pos.left)) vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.left));
-            //    if (!DEUtility.ContainsPos(pos.forward)) vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.forward));
-            //    if (!DEUtility.ContainsPos(pos.back)) vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.back));
-            //    if (!DEUtility.ContainsPos(pos.up)) vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.up));
-            //    if (!DEUtility.ContainsPos(pos.down)) vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.down));
+            //    if (!DEUtility.ContainsPos(pos.right)) ;// vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.right));
+            //    if (!DEUtility.ContainsPos(pos.left)) ;// vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.left));
+            //    if (!DEUtility.ContainsPos(pos.forward)) ;// vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.forward));
+            //    if (!DEUtility.ContainsPos(pos.back)) ;// vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.back));
+            //    if (!DEUtility.ContainsPos(pos.up)) ;// vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.up));
+            //    if (!DEUtility.ContainsPos(pos.down)) ;// vertexToCalculate.Add(DEPosition.GetQuadLocalVertexs(pos, DEDirection.down));
             //}
-
+            //UnityEngine.Debug.Log("Time used for updating selection:" + sw.ElapsedMilliseconds);
             ////////////////////////////////////////
 
-            //multithreading speed up the drawing by around 60%
+            //multithreading speed up the drawing by around 60 %
             int threadCount = 6;
             ConcurrentQueue<Vector3[]> sels = new ConcurrentQueue<Vector3[]>();
 
@@ -207,7 +211,7 @@ public static class HandleDrawer
                     DEPosition pos = visibleSelection[i];
                     if (!DEUtility.ContainsPos(pos.right)) sels.Enqueue(DEPosition.GetQuadWorldVertexs(pos, DEDirection.right, l2W));
                     if (!DEUtility.ContainsPos(pos.left)) sels.Enqueue(DEPosition.GetQuadWorldVertexs(pos, DEDirection.left, l2W));
-                    if (!DEUtility.ContainsPos(pos.forward)) sels.Enqueue(DEPosition.GetQuadWorldVertexs(pos, DEDirection.forward, l2W));
+                    if (!DEUtility.ContainsPos(pos.front)) sels.Enqueue(DEPosition.GetQuadWorldVertexs(pos, DEDirection.front, l2W));
                     if (!DEUtility.ContainsPos(pos.back)) sels.Enqueue(DEPosition.GetQuadWorldVertexs(pos, DEDirection.back, l2W));
                     if (!DEUtility.ContainsPos(pos.up)) sels.Enqueue(DEPosition.GetQuadWorldVertexs(pos, DEDirection.up, l2W));
                     if (!DEUtility.ContainsPos(pos.down)) sels.Enqueue(DEPosition.GetQuadWorldVertexs(pos, DEDirection.down, l2W));
@@ -227,7 +231,7 @@ public static class HandleDrawer
             }
 
             foreach (Vector3[] verts in sels) quadVerts.AddRange(verts);
-
+            UnityEngine.Debug.Log("Time used for updating selection:" + sw.ElapsedMilliseconds);
             ////////////////////////////////
 
             //split this thread into 6 child thread to do the following calculation:
@@ -385,7 +389,7 @@ public static class HandleDrawer
                 case DEDirection.left:
                     planeVerts = new Vector3[] { p[1], p[0], p[7], p[6] };
                     break;
-                case DEDirection.forward:
+                case DEDirection.front:
                     planeVerts = new Vector3[] { p[0], p[3], p[4], p[7] };
                     break;
                 case DEDirection.back:

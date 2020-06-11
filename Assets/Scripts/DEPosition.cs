@@ -1,8 +1,9 @@
 ﻿//the basic data srtucture representing the position in dog egg editor
 using UnityEngine;
 [System.Serializable]
-public struct DEPosition
+public class DEPosition
 {
+    //why did I use stuct instead of class for this??
     private int _x;
     private int _y;
     private int _z;
@@ -23,6 +24,13 @@ public struct DEPosition
     private static Vector3[] backVertexs = { p6, p5, p2, p1 };
     private static Vector3[] leftVertexs = { p1, p0, p7, p6 };
 
+    //private bool hashCalculated;
+    //private int hashCode; //
+
+    public DEPosition()
+    {
+    }
+
     public DEPosition(int x, int y, int z)
     {
         _x = x;
@@ -32,10 +40,10 @@ public struct DEPosition
 
     public int x
     {
-        set
-        {
-            _x = value;
-        }
+        //set
+        //{
+        //    _x = value;
+        //}
         get
         {
             return _x;
@@ -44,10 +52,10 @@ public struct DEPosition
 
     public int y
     {
-        set
-        {
-            _y = value;
-        }
+        //set
+        //{
+        //    _y = value;
+        //}
         get
         {
             return _y;
@@ -56,10 +64,10 @@ public struct DEPosition
 
     public int z
     {
-        set
-        {
-            _z = value;
-        }
+        //set
+        //{
+        //    _z = value;
+        //}
         get
         {
             return _z;
@@ -73,6 +81,7 @@ public struct DEPosition
         _z = z;
     }
 
+    private DEPosition _right;
     /// <summary>
     /// Returns (x+1, y, z)
     /// </summary>
@@ -80,10 +89,14 @@ public struct DEPosition
     {
         get
         {
-            return new DEPosition(_x + 1, _y, _z);
+            if (_right == null) {
+                _right = new DEPosition(_x + 1, _y, _z);
+            }
+            return _right;
         }
     }
 
+    private DEPosition _left;
     /// <summary>
     /// Returns(x-1, y, z)
     /// </summary>
@@ -91,10 +104,14 @@ public struct DEPosition
     {
         get
         {
-            return new DEPosition(_x - 1, _y, _z);
+            if (_left == null) {
+                _left = new DEPosition(_x - 1, _y, _z);
+            }
+            return _left;
         }
     }
 
+    private DEPosition _up;
     /// <summary>
     /// Returns(x, y, z+1)
     /// </summary>
@@ -102,10 +119,14 @@ public struct DEPosition
     {
         get
         {
-            return new DEPosition(_x, _y, _z + 1);
+            if (_up == null) {
+                _up = new DEPosition(_x, _y, _z + 1);
+            }
+            return _up;
         }
     }
 
+    private DEPosition _down;
     /// <summary>
     /// Returns(x, y, z-1)
     /// </summary>
@@ -113,21 +134,29 @@ public struct DEPosition
     {
         get
         {
-            return new DEPosition(_x, _y, _z - 1);
+            if (_down == null) {
+                _down = new DEPosition(_x, _y, _z - 1);
+            }
+            return _down;
         }
     }
 
+    private DEPosition _front;
     /// <summary>
     /// Returns(x, y+1, z)
     /// </summary>
-    public DEPosition forward
+    public DEPosition front
     {
         get
         {
-            return new DEPosition(_x, _y + 1, _z);
+            if (_front == null) {
+                _front = new DEPosition(_x, _y + 1, _z);
+            }
+            return _front;
         }
     }
 
+    private DEPosition _back;
     /// <summary>
     /// Returns(x, y-1, z)
     /// </summary>
@@ -135,7 +164,10 @@ public struct DEPosition
     {
         get
         {
-            return new DEPosition(_x, _y - 1, _z);
+            if (_back == null) {
+                _back = new DEPosition(_x, _y - 1, _z);
+            }
+            return _back;
         }
     }
 
@@ -168,8 +200,8 @@ public struct DEPosition
                 return right;
             case DEDirection.left:
                 return left;
-            case DEDirection.forward:
-                return forward;
+            case DEDirection.front:
+                return front;
             case DEDirection.back:
                 return back;
             case DEDirection.up:
@@ -188,10 +220,10 @@ public struct DEPosition
                 return left;
             case DEDirection.left:
                 return right;
-            case DEDirection.forward:
+            case DEDirection.front:
                 return back;
             case DEDirection.back:
-                return forward;
+                return front;
             case DEDirection.up:
                 return down;
             case DEDirection.down:
@@ -218,7 +250,7 @@ public struct DEPosition
             case DEDirection.left:
                 verts = leftVertexs;
                 break;
-            case DEDirection.forward:
+            case DEDirection.front:
                 verts = forwardVertexs;
                 break;
             case DEDirection.back:
@@ -336,11 +368,12 @@ public struct DEPosition
 
     public override bool Equals(object obj)
     {
-        if (obj is DEPosition) {
-            return (_x == ((DEPosition)obj).x && _y == ((DEPosition)obj).y && _z == ((DEPosition)obj).z);
-        } else {
-            return false;
-        }
+        if (obj == null) return false;
+        if (!(obj is DEPosition)) return false;
+        DEPosition o = (DEPosition)obj;
+        if (o == this) return true;
+
+        return _x == o.x && _y == o.y && _z == o.z;
     }
 
     public static DEPosition operator +(DEPosition a, DEPosition b)
@@ -354,15 +387,15 @@ public struct DEPosition
         return new DEPosition(a.x / b, a.y / b, a.z / b);
     }
 
-    public static bool operator ==(DEPosition lhs, DEPosition rhs)
-    {
-        return (lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z);
-    }
+    //public static bool operator ==(DEPosition lhs, DEPosition rhs)
+    //{
+    //    return (lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z);
+    //}
 
-    public static bool operator !=(DEPosition lhs, DEPosition rhs)
-    {
-        return !(lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z);
-    }
+    //public static bool operator !=(DEPosition lhs, DEPosition rhs)
+    //{
+    //    return !(lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z);
+    //}
 
     public static DEPosition operator *(DEPosition a, int b)
     {
